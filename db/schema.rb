@@ -11,7 +11,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141108221509) do
+ActiveRecord::Schema.define(version: 20141108224825) do
+
+  create_table "stories", force: true do |t|
+    t.integer  "hacker_news_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.boolean  "deleted",        default: false
+    t.string   "by"
+    t.datetime "time"
+    t.boolean  "dead",           default: false
+    t.text     "url"
+    t.text     "title"
+    t.integer  "score"
+  end
 
   create_table "top_stories", force: true do |t|
     t.integer  "hacker_news_id"
