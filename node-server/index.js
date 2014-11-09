@@ -1,17 +1,35 @@
+// require the modules here
 var FirebaseConstructor = require("firebase");
 var querystring = require('querystring');
 var http = require('http');
 var fs = require('fs');
 var request = require("request");
 
-var updates = new FirebaseConstructor("https://hacker-news.firebaseio.com/v0/updates/items");
-var top_stories = new FirebaseConstructor("https://hacker-news.firebaseio.com/v0/topstories");
-var items = new FirebaseConstructor("https://hacker-news.firebaseio.com/v0/item");
+// declaring some varables
+var locations = function(){
+    var _firebase = new FirebaseConstructor("https://hacker-news.firebaseio.com/vo/");
+    var _locations = {
+        "top_stories": _firebase.child("topstories"),
+        "item_updates": _firebase.child("updates/items")
+    };
+    var _deep_copy = function(obj){
+        return JSON.parse(JSON.stringify(obj));
+    }
+    return function(type, id){
+        if (type === "item") {
+            return _firebase.child("item/" + id.toString());
+        } else {
+            return _locations[type];
+        }
+    }
+}();
 
 var update_db = (function(){
     var _host_name = "http://localhost:3000"
 
-    return function(type_of_update, data){
+    return function(type_of_update, data){ 
+    // this function will be responsible in determining the object type and assigning them accordingly to the right rails request
+    // in other words, this function is very important
         try {
             if (type_of_update === "top_stories") {
                 request({
@@ -69,26 +87,23 @@ var update_db = (function(){
     };
 })();
 
-var retrieveItem = function(id, callback){
-    items.child(id.toString()).once("value", callback);
-}
-
-var handleNewChild = function(new_child_ss){
+// updating items
+var handleUpdatedItem = function(new_child_ss){
     var id = new_child_ss.val();
     console.log("New child of %s has been added!", id);
-    retrieveItem(id, function(obj_ss){
+    location("item", id).once("value", function(){
         update_db(obj_ss.val().type, obj_ss.val());
     });
 }
 
-updates.on("child_removed", function(removed_child){
+location("item_updates").on("child_removed", function(removed_child){
     console.log("A child is removed, but there is nothing i need to do bout it!");
-})
+});
+location("item_updates").on("child_added", handleUpdatedItem);
+location("item_updates").on("child_changed", handleUpdatedItem);
 
-updates.on("child_added", handleNewChild);
-updates.on("child_changed", handleNewChild);
-
-top_stories.on("value", function(top_stories_ss){
+// updating top stories
+location("top_stories").on("value", function(top_stories_ss){
     console.log("A new list of top stories have just been obtained!");
     update_db("top_stories", top_stories_ss.val())
 });
